@@ -5,6 +5,9 @@ import (
 	"log"
 	"net"
 	"sync"
+
+	"github.com/Chamundsen/minyr/yr"
+	"github.com/Chamundsen/is105sem03/mycrypt"
 )
 
 func main() {
@@ -15,7 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-defer server.Close()
+	defer server.Close()
 	log.Printf("bundet til %s", server.Addr().String())
 	wg.Add(1)
 	go func() {
@@ -35,19 +38,36 @@ defer server.Close()
 						if err != io.EOF {
 							log.Println(err)
 						}
-						return // fra for løkke
+						return // fra for-løkke
 					}
-					switch msg := string(buf[:n]); msg {
-  				        case "ping":
-						_, err = c.Write([]byte("pong"))
-					default:
-						_, err = c.Write(buf[:n])
-					}
-					if err != nil {
-						if err != io.EOF {
-							log.Println(err)
+
+					dekryptertMelding := mycrypt.Krypter([]rune(string(buf[:n])), mycrypt.ALF_SEM03, len(mycrypt.ALF_SEM03)-4)
+					log.Println("Dekrypter melding: ", string(dekryptertMelding))
+					switch msg := string(dekryptertMelding); msg {
+					case "ping":
+						_, err = c.Write([]byte(string(dekryptertMelding)))
+
+case "Kjevik;SN39040;18.03.2022 01:50;6":
+                                                fahrMelding, err := yr.CelsiusToFahrenheitLine(msg)
+                                                if err!= nil {
+                                                        log.Fatal(err)
+                                                }
+
+                                                kryptertFahrMelding := mycrypt.Krypter([]rune(fahrMelding), mycrypt.ALF_SEM03, 4)
+                                                _, err = c.Write([]byte(string(kryptertFahrMelding)))
+						if err != nil {
+							log.Fatal(err)
 						}
-						return // fra for løkke
+
+					default:{
+							_, err = c.Write(buf[:n])
+						}
+						if err != nil {
+							if err != io.EOF {
+								log.Println(err)
+							}
+							return // fra for-løkke
+						}
 					}
 				}
 			}(conn)
@@ -55,3 +75,4 @@ defer server.Close()
 	}()
 	wg.Wait()
 }
+
